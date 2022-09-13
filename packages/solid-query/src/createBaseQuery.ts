@@ -2,8 +2,8 @@ import { QueryObserver } from "@tanstack/query-core";
 import type { QueryKey, QueryObserverResult } from "@tanstack/query-core";
 import { CreateBaseQueryOptions } from "./types";
 import { useQueryClient } from "./QueryClientProvider";
-import { onMount, onCleanup, createComputed, createResource, on } from "solid-js";
-import { createStore } from "solid-js/store";
+import { onMount, onCleanup, createComputed, createResource, on, batch } from "solid-js";
+import { createStore, unwrap } from "solid-js/store";
 import { shouldThrowError } from "./utils";
 
 // Base Query Function that is used to create the query.
@@ -28,26 +28,25 @@ export function createBaseQuery<
     observer.getOptimisticResult(defaultedOptions),
   );
 
-
-  const [dataResource, { refetch }] = createResource<TData | undefined>((_, info) => {
-    const { refetching = state } = info as { refetching: false | QueryObserverResult<TData, TError> };
-
-    if (!refetching && state.data) return state.data;
-
+  const [dataResource, { refetch, mutate }] = createResource<TData | undefined>(() => {
     return new Promise((resolve) => {
-      if (refetching) {
-        if (!(refetching.isFetching && refetching.isLoading)) { 
-          resolve(refetching.data);
+        if (!(state.isFetching && state.isLoading)) { 
+          resolve(unwrap(state.data));
         }
-      }
     });
   });
 
+  batch(() => {
+    mutate(() => unwrap(state.data));
+    refetch();  
+  })
+
   const unsubscribe = observer.subscribe((result) => {
-    if(result.isLoading && result.isFetching) {
-      setState(result);
-    }
-    refetch(result);
+    batch(() => {
+      setState(unwrap(result));
+      mutate(() => unwrap(result.data));
+      refetch();  
+    })
   });
 
   onCleanup(() => unsubscribe());
@@ -61,31 +60,31 @@ export function createBaseQuery<
     observer.setOptions(newDefaultedOptions);
   });
 
-  createComputed(
-    on(
-      () => dataResource.state,
-      () => {
-        const trackStates = ["pending", "ready", "errored"];
-        if (trackStates.includes(dataResource.state)) {
-          const currentState = observer.getCurrentResult();
-          setState(currentState);
-          if ( 
-            currentState.isError && 
-            !currentState.isFetching &&
-            shouldThrowError(
-              observer.options.useErrorBoundary,
-              [
-                currentState.error,
-                observer.getCurrentQuery(),
-              ]
-            ) 
-          ) {
-            throw currentState.error;
-          }
-        }
-      },
-    ),
-  );
+  // createComputed(
+  //   on(
+  //     () => dataResource.state,
+  //     () => {
+  //       const trackStates = ["pending", "ready", "errored"];
+  //       if (trackStates.includes(dataResource.state)) {
+  //         const currentState = observer.getCurrentResult();
+  //         setState(currentState);
+  //         if ( 
+  //           currentState.isError && 
+  //           !currentState.isFetching &&
+  //           shouldThrowError(
+  //             observer.options.useErrorBoundary,
+  //             [
+  //               currentState.error,
+  //               observer.getCurrentQuery(),
+  //             ]
+  //           ) 
+  //         ) {
+  //           throw currentState.error;
+  //         }
+  //       }
+  //     },
+  //   ),
+  // );
 
   const handler = {
     get(

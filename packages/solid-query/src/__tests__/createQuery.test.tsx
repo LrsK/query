@@ -1317,7 +1317,7 @@ describe('createQuery', () => {
 
   it('should create a new query when refetching a removed query', async () => {
     const key = queryKey()
-    const states: CreateQueryResult<number>[] = []
+    const states: any[] = []
     let count = 0
 
     function Page() {
@@ -1330,7 +1330,7 @@ describe('createQuery', () => {
       )
 
       createRenderEffect(() => {
-        states.push({ ...state })
+        states.push({ data: state.data, dataUpdatedAt: state.dataUpdatedAt })
       })
 
       return (
@@ -1440,7 +1440,7 @@ describe('createQuery', () => {
 
   it('should use query function from hook when the existing query does not have a query function', async () => {
     const key = queryKey()
-    const results: DefinedCreateQueryResult<string>[] = []
+    const results: any[] = []
 
     queryClient.setQueryData(key(), 'set')
 
@@ -1457,8 +1457,10 @@ describe('createQuery', () => {
         },
       )
 
-      results.push(result)
-
+      createRenderEffect(() => {
+        results.push({ data: result.data, isFetching: result.isFetching })
+      })
+      
       return (
         <div>
           <div>isFetching: {result.isFetching}</div>
@@ -1504,6 +1506,13 @@ describe('createQuery', () => {
       )
 
       createRenderEffect(() => {
+        console.log('My Log', {
+          data: state.data,
+          isFetching: state.isFetching,
+          isRefetching: state.isRefetching,
+          isSuccess: state.isSuccess,
+          isStale: state.isStale,
+        })
         states.push({ ...state })
       })
 
