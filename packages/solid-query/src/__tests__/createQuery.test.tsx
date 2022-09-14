@@ -28,7 +28,7 @@ import {
   createEffect,
   createSignal,
   Show,
-  ErrorBoundary
+  ErrorBoundary,
 } from 'solid-js'
 
 describe('createQuery', () => {
@@ -62,14 +62,10 @@ describe('createQuery', () => {
       expectType<Error | null>(withError.error)
 
       // it should provide the result type in the configuration
-      createQuery(
-        key,
-        async () => true,
-        {
-          onSuccess: (data) => expectType<boolean>(data),
-          onSettled: (data) => expectType<boolean | undefined>(data),
-        },
-      )
+      createQuery(key, async () => true, {
+        onSuccess: (data) => expectType<boolean>(data),
+        onSettled: (data) => expectType<boolean | undefined>(data),
+      })
 
       // it should be possible to specify a union type as result type
       const unionTypeSync = createQuery(
@@ -121,9 +117,8 @@ describe('createQuery', () => {
 
       createQuery({
         queryKey: () => ['my-data', 100] as const,
-        queryFn: getMyDataArrayKey
+        queryFn: getMyDataArrayKey,
       })
-
 
       const getMyDataStringKey: QueryFunction<MyData, readonly ['1']> = async (
         context,
@@ -160,7 +155,10 @@ describe('createQuery', () => {
           'queryKey' | 'queryFn' | 'initialData'
         >,
       ) => createQuery(qk, () => fetcher(qk()[1], 'token'), options)
-      const test = useWrappedQuery(() => [''], async () => '1')
+      const test = useWrappedQuery(
+        () => [''],
+        async () => '1',
+      )
       expectType<string | undefined>(test.data)
 
       // handles wrapped queries with custom fetcher passed directly to createQuery
@@ -177,7 +175,10 @@ describe('createQuery', () => {
           'queryKey' | 'queryFn' | 'initialData'
         >,
       ) => createQuery(qk, fetcher, options)
-      const testFuncStyle = useWrappedFuncStyleQuery(() => [''], async () => true)
+      const testFuncStyle = useWrappedFuncStyleQuery(
+        () => [''],
+        async () => true,
+      )
       expectType<boolean | undefined>(testFuncStyle.data)
     }
   })
@@ -1322,13 +1323,10 @@ describe('createQuery', () => {
     let count = 0
 
     function Page() {
-      const state = createQuery(
-        key,
-        async () => {
-          await sleep(10)
-          return ++count
-        }
-      )
+      const state = createQuery(key, async () => {
+        await sleep(10)
+        return ++count
+      })
 
       createRenderEffect(() => {
         states.push({ data: state.data, dataUpdatedAt: state.dataUpdatedAt })
@@ -1461,7 +1459,7 @@ describe('createQuery', () => {
       createRenderEffect(() => {
         results.push({ data: result.data, isFetching: result.isFetching })
       })
-      
+
       return (
         <div>
           <div>isFetching: {result.isFetching}</div>
@@ -1589,17 +1587,19 @@ describe('createQuery', () => {
           await sleep(5)
           return count()
         },
-        { get enabled() {
-           return count() === 0 
-        }},
+        {
+          get enabled() {
+            return count() === 0
+          },
+        },
       )
 
       createRenderEffect(() => {
         const { data, isSuccess, isFetching } = state
-        states.push({ 
+        states.push({
           data,
           isFetching,
-          isSuccess
+          isSuccess,
         })
       })
 
@@ -1660,17 +1660,17 @@ describe('createQuery', () => {
 
       createRenderEffect(() => {
         const { data, isFetching, isSuccess, isPreviousData } = state
-        console.log('LOG', { 
+        console.log('LOG', {
           data,
           isFetching,
           isSuccess,
-          isPreviousData
+          isPreviousData,
         })
-        states.push({ 
+        states.push({
           data,
           isFetching,
           isSuccess,
-          isPreviousData
+          isPreviousData,
         })
       })
 
@@ -2252,7 +2252,6 @@ describe('createQuery', () => {
     ])
   })
 
-
   it('should re-render when a query becomes stale', async () => {
     const key = queryKey()
     const states: CreateQueryResult<string>[] = []
@@ -2643,10 +2642,13 @@ describe('createQuery', () => {
     const states: CreateQueryResult<CustomQueryKey>[] = []
 
     function Page() {
-      const state = createQuery(() => [key(), variables], async ({ queryKey: qk }) => {
-        await sleep(10)
-        return qk as CustomQueryKey
-      })
+      const state = createQuery(
+        () => [key(), variables],
+        async ({ queryKey: qk }) => {
+          await sleep(10)
+          return qk as CustomQueryKey
+        },
+      )
       createRenderEffect(() => {
         states.push({ ...state })
       })
@@ -2863,7 +2865,7 @@ describe('createQuery', () => {
         <Page />
       </QueryClientProvider>
     ))
-    
+
     await screen.findByText('data: 0')
 
     expect(states.length).toBe(2)
@@ -3152,15 +3154,14 @@ describe('createQuery', () => {
     }
 
     function App() {
-
       const [showPage, setShowPage] = createSignal(true)
 
-      const toggle = () => setShowPage(s => !s)
+      const toggle = () => setShowPage((s) => !s)
 
       return (
         <div>
           <button onClick={toggle}>{showPage() ? 'hide' : 'show'}</button>
-          <Show when={showPage()} >
+          <Show when={showPage()}>
             <Page />
           </Show>
         </div>
@@ -3211,16 +3212,18 @@ describe('createQuery', () => {
     function App() {
       const [showPage, setShowPage] = createSignal(true)
 
-      const toggle = () => setShowPage(s => !s)
+      const toggle = () => setShowPage((s) => !s)
 
       return (
         <div>
           <button onClick={toggle}>{showPage() ? 'hide' : 'show'}</button>
-          <button onClick={() => queryClient.cancelQueries({ queryKey: key() })}>
+          <button
+            onClick={() => queryClient.cancelQueries({ queryKey: key() })}
+          >
             cancel
           </button>
 
-          <Show when={showPage()} >
+          <Show when={showPage()}>
             <Page />
           </Show>
         </div>
